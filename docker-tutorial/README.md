@@ -3,8 +3,6 @@
 <img width="130" align="center" src="img/logo.svg"/>
 </p>
 <h1 align="center">Docker入门教程</h1>
-
-
 Docker 是一个开源的应用容器引擎，而一个<ruby>容器<rt>containers</rt></ruby>其实是一个虚拟化的独立的环境，让开发者可以打包他们的应用以及依赖包到一个可移植的容器中，然后发布到任何流行的 Linux 机器上，也可以实现虚拟化。容器是完全使用沙箱机制，相互之间不会有任何接口。
 
 - Docker 的局限性之一，它只能用在 64 位的操作系统上。
@@ -12,41 +10,7 @@ Docker 是一个开源的应用容器引擎，而一个<ruby>容器<rt>container
 目录
 ===
 
-<!-- TOC -->
-
-- [新版本安装](#新版本安装)
-- [旧版本安装](#旧版本安装)
-- [命令介绍](#命令介绍)
-- [服务管理](#服务管理)
-- [镜像管理](#镜像管理)
-  - [通过容器创建镜像](#通过容器创建镜像)
-  - [通过Dockerfile创建镜像](#通过dockerfile创建镜像)
-  - [发布自己的镜像](#发布自己的镜像)
-  - [镜像中安装软件](#镜像中安装软件)
-- [容器管理](#容器管理)
-  - [容器服务管理](#容器服务管理)
-  - [进入容器](#进入容器)
-- [文件拷贝](#文件拷贝)
-- [Docker私有仓库搭建](#docker私有仓库搭建)
-  - [`registry`](#registry)
-  - [`Harbor`](#harbor)
-- [使用Docker实战](#使用docker实战)
-  - [`Nginx`](#nginx)
-  - [`MySQL`](#mysql)
-  - [`Redis`](#redis)
-  - [`Elasticsearch`](#elasticsearch)
-  - [`Gitlab`](#gitlab)
-  - [`Rocket.Chat`](#rocketchat)
-  - [`Humpback`](#humpback)
-  - [`Seafile`](#seafile)
-  - [更多](#更多)
-- [卸载旧的版本](#卸载旧的版本)
-- [参考资料](#参考资料)
-  - [官方英文资源](#官方英文资源)
-  - [中文资源](#中文资源)
-  - [其它资源](#其它资源)
-
-<!-- /TOC -->
+[TOC]
 
 Docker 从 `1.13` 版本之后采用时间线的方式作为版本号，分为社区版 `CE` 和企业版 `EE`，社区版是免费提供给个人开发者和小型团体使用的，企业版会提供额外的收费服务，比如经过官方测试认证过的基础设施、容器、插件等。
 
@@ -201,27 +165,23 @@ service docker status      # 查看 docker 服务状态
 chkconfig docker on        # 设置为开机启动
 ```
 
-## 镜像的拉取
-
-```shell
-docker search centos						# 搜索docker官方提供的centos镜像
-docker search centos --filter=stars=100		# 查找stars数至少为100的镜像
-docker pull centos							# 默认从官网拉取
-docker pull daocloud.io/library/centos		# 从daocloud拉取
-docker dao pull centos						# 从daocloud拉取
-```
-
 ## 镜像管理
 
 镜像可以看做我们平时装系统的镜像，里面就是一个运行环境。
 
 ```bash
-docker pull centos:latest  # 从docker.io中下载centos镜像到本地
-docker images              # 查看已下载的镜像
-docker images -q		   # 只查看所有镜像的id
-docker inspect imageID	   # 查看镜像详情
-docker rm image_id         # 删除镜像，指定镜像id
-docker rmi RepositoryName --force # 删除镜像，指定镜像名, --force镜像在使用中强制删除
+docker search centos						# 搜索docker官方提供的centos镜像
+docker search centos --filter=stars=100		# 查找stars数至少为100的镜像
+docker pull centos							# 默认从官网拉取
+docker pull daocloud.io/library/centos		# 从daocloud拉取
+docker dao pull centos						# 从daocloud拉取
+docker images              					# 查看已下载的镜像
+docker rm image_id         					# 删除镜像，指定镜像id
+docker images              					# 查看已下载的镜像
+docker images -q		   					# 只查看所有镜像的id
+docker inspect imageID	   					# 查看镜像详情
+docker rm image_id         					# 删除镜像，指定镜像id
+docker rmi RepositoryName --force 			# 删除镜像，指定镜像名, --force镜像在使用中强制删除
 
 # 如果镜像正在被未运行的容器使用，则需要强制删除，但是如果正在被运行的容器使用，则强制删除也无法删除
 
@@ -233,128 +193,6 @@ docker rmi $(docker images -q)
 # 连接进行进入命令行模式，exit命令退出。
 docker run -t -i nginx:latest /bin/bash
 ```
-
-
-
-## 查看Docker容器
-
-```shell
-docker ps							# 查看运行状态的容器
-docker ps -a						# 查看所有容器
-docker ps -a -q						# 查看所有容器的ID
-docker ps -qf status=running		# 查看某种状态的容器ID
-docker ps -l						# 列出最近一次启动的容器
-docker inspect  7657b3785bcf		# 查看容器详细配置信息，包含容器名，环境变量，运行命令，主机配置，网络配置，数据卷配置等，json格式；
-docker inspect --format'{{.Config.Image}}' 7657b3485
-daocloud.io/library/centos
-docker inspect --format='{{.NetworkSettings.IPAddress}}' 7657b3485
-```
-
-## 操作Docker容器
-
-```shell
-docker create -it --name nginx library/centos /bin/bash			# 创建不处于运行状态的容器
-docker ps -a -f status=created |grep nginx
-6474c3d48692    centos       "/bin/bash"    3 minutes ago   Created    nginx
-
-# 同一个镜像可以启动多个容器
-# 创建运行容器且连接到容器
-docker run -it --rm --cidfile="id.txt" centos /bin/bash
--i					# 捕获标准输入输出，保持交互式的意思
--t					# 分配一个终端或控制台，每一个控制台都要伴随一个shell
---rm				# 退出时就删除该容器，默认情况下，每个容器在退出时，他的文件系统会保存下来，这样一方面有利于调试，因为可以通过查看日志等方式来确定最终状态；另一方面，也可以报错容器所产生的数据，如果仅仅需要短暂的运行一个容器，且不需要保存容器中的数据，就可以在exit容器时自动清理掉容器及产生的数据，但此选项不能与-d共用
--d					# 创建容器运行在后台
-/bin/bash			# 容器运行起来之后运行的程序，也可以是任何的命令，/bin/echo  hello
---cidfile			# 指定容器运行之后container长id的存放文件位置
-
-########################################################################################
-
-# 创建容器运行在后台
-# 容器在后台运行时，所有I/O数据只能通过网络资源或者共享卷组来进行交互
-docker run -it -d php centos /bin/bash
-
-# 打印该容器输出
-docker run -it -d --name test centos /bin/bash -c "while true; do echo hello world;sleep 2;done"
-docker logs test
-
-# 运行远程机器上的容器
-docker run -it -d -h 39.108.140.0 daocloud.io/centos:7
-
-########################################################################################
-# 断开容器
-# 断开与容器的连接，并且关闭容器
-[root@7968b4436989 /]# exit
-[root@7968b4436989 /]# docker stop 7968b443
-
-# 只断开和容器的连接而不关闭容器
-	快捷键： ctrl+p+q
-
-# 关闭运行中的容器
-# 如果此时有其他终端正在对他进行交互会自动中断
-# docker stop contrainer_id/name		//发送SIGTERM信号，可忽略，15信号
-# docker kill contrainer_id/name		//发送SIGKILL信号，9信号
-
-#########################################################################################
-# 连接关闭的容器
-# 连接关闭但运行的容器
-[root@docker-39 ~]#  ps -q 
-7b5f30fe77c0
-[root@docker-39 ~]# docker attach 7b5f
-[root@7b5f30fe77c0 /]#
-
-# 连接关闭且未运行的容器
-docker ps -a -qf status=exited
-7968b44369
-[root@docker-39 ~]# docker start 7968b44369
-7968b44369
-[root@docker-39 ~]# docker attach 7968b44369			# 会附加该容器的标准输出到当前命令行
-
-
-# 启动状态的容器，执行任务
-# 通过exec命令可以创建两种任务：后台型任务和交互型任务
-# 后台型任务：docker exec -it test /bin/bash
-# 交互型任务：docker attach 7968
-#########################################################################################
-
-# 删除容器
-docker rm ContainerID/Name
-# 删除所有退出状态的容器
-docker rm $(docker ps -qf status=exited)
-#########################################################################################
-
-# 监控容器运行
-docker logs container_id/container_name
---tail选项可以指定查看最后几条日志
--t选项则可以对日志条目附加时间戳
--f选项可以跟踪日志的输出，直到手动停止
-
-#########################################################################################
-
-# Docker容器开机启动设置
-sudo docker run --restart=always -it centos /bin/bash
---restart=always	# 默认情况下docker重启之后所有容器会被关闭，这个选项的意思是容器随docker engine自启动
-	# 如果创建时候未指定--restart=always,可通过docker  update命令设置：
-docker update --restart=always  7b5f30fe77c0	
-	# 注意Docker服务开启启动
-```
-
-restart参数介绍
-
-- no:容器退出时候，不重启容器
-
-- on-failure: 只有在非0状态退出时才重新启动容器
-
-- always:无论退出状态是如何，都重启容器
-
-- unless-stopped: 在容器退出时总是重启容器，但是不考虑在Docker守护进程启动时就已经停止了的容器
-
-  在使用on-failure策略时，指定Docker将尝试重新启动容器的最大次数；
-
-  默认情况下，Docker将尝试永远重新启动容器
-
-  ```
-  sudo docker run --restart=on-failure:5  <image>
-  ```
 
 ### 通过容器创建镜像
 
@@ -471,6 +309,7 @@ yum install vim
 ```bash
 # 列出本机正在运行的容器
 docker container ls
+
 # 列出本机所有容器，包括终止运行的容器
 docker container ls --all
 docker start [containerID/Names] # 启动容器
@@ -481,37 +320,113 @@ docker exec -it [containerID/Names] /bin/bash  # 进入容器
 
 # 从正在运行的 Docker 容器里面，将文件拷贝到本机，注意后面有个【点】拷贝到当前目录
 docker container cp [containID]:[/path/to/file] .
-
 docker run centos echo "hello world"  # 在docker容器中运行hello world!
 docker run centos yum install -y wget # 在docker容器中，安装wget软件
 docker ps                           # 列出包括未运行的容器
 docker ps -a                        # 查看所有容器(包括正在运行和已停止的)
-docker logs my-nginx                # 查看 my-nginx 容器日志
-
-docker run -i -t centos /bin/bash   # 启动一个容器
-docker inspect centos     # 检查运行中的镜像
-docker commit 8bd centos  # 保存对容器的修改
-docker commit -m "n changed" my-nginx my-nginx-image # 使用已经存在的容器创建一个镜像
+docker ps -a -q						# 查看所有容器的ID
+docker ps -qf status=running		# 查看某种状态的容器ID
+docker ps -l						# 列出最近一次启动的容器
+docker inspect  7657b3785bcf		# 查看容器详细配置信息，包含容器名，环境变量，运行命令，主机配置，网络配置，数据卷配置等，json格式；
 docker inspect -f {{.State.Pid}} 44fc0f0582d9 # 获取id为 44fc0f0582d9 的PID进程编号
-# 下载指定版本容器镜像
-docker pull gitlab/gitlab-ce:11.2.3-ce.0
+docker inspect --format'{{.Config.Image}}' 7657b3485
+daocloud.io/library/centos
+docker inspect --format='{{.NetworkSettings.IPAddress}}' 7657b3485
+docker logs my-nginx                # 查看 my-nginx 容器日志
+docker run -i -t centos /bin/bash   # 启动一个容器
+docker commit 8bd centos  			# 保存对容器的修改
+docker commit -m "n changed" my-nginx my-nginx-image # 使用已经存在的容器创建一个镜像
+docker pull gitlab/gitlab-ce:11.2.3-ce.0	# 下载指定版本容器镜像
+
+#########################################################################################
+# 创建容器运行在后台
+# 容器在后台运行时，所有I/O数据只能通过网络资源或者共享卷组来进行交互
+docker run -it -d php centos /bin/bash
+
+# 打印该容器输出
+docker run -it -d --name test centos /bin/bash -c "while true; do echo hello world;sleep 2;done"
+docker logs test
+# 监控容器运行
+docker logs container_id/container_name
+--tail:			# 选项可以指定查看最后几条日志
+-t:				# 选项则可以对日志条目附加时间戳
+-f:				# 选项可以跟踪日志的输出，直到手动停止
+
+# 运行远程机器上的容器
+docker run -it -d -h 39.108.140.0 daocloud.io/centos:7
+
+########################################################################################
+# 断开容器
+# 断开与容器的连接，并且关闭容器
+[root@7968b4436989 /]# exit
+[root@7968b4436989 /]# docker stop 7968b443
+
+# 只断开和容器的连接而不关闭容器
+	快捷键： ctrl+p+q
+
+# 关闭运行中的容器
+# 如果此时有其他终端正在对他进行交互会自动中断
+# docker stop contrainer_id/name		//发送SIGTERM信号，可忽略，15信号
+# docker kill contrainer_id/name		//发送SIGKILL信号，9信号
 ```
+
+### 容器命令参数
+
+```shell
+# 同一个镜像可以启动多个容器
+# 创建运行容器且连接到容器
+docker run -it --rm --cidfile="id.txt" centos /bin/bash
+-i					# 捕获标准输入输出，保持交互式的意思
+-t					# 分配一个终端或控制台，每一个控制台都要伴随一个shell
+--rm				# 退出时就删除该容器，默认情况下，每个容器在退出时，他的文件系统会保存下来，这样一方面有利于调试，因为可以通过查看日志等方式来确定最终状态；另一方面，也可以报错容器所产生的数据，如果仅仅需要短暂的运行一个容器，且不需要保存容器中的数据，就可以在exit容器时自动清理掉容器及产生的数据，但此选项不能与-d共用
+-d					# 创建容器运行在后台
+/bin/bash			# 容器运行起来之后运行的程序，也可以是任何的命令，/bin/echo  hello
+--cidfile			# 指定容器运行之后container长id的存放文件位置
+```
+
+
 
 ### 容器服务管理
 
 ```bash
-docker run -itd --name my-nginx2 nginx # 通过nginx镜像，【创建】容器名为 my-nginx2 的容器
-docker start my-nginx --restart=always    # 【启动策略】一个已经存在的容器启动添加策略
-                               # no - 容器不重启
-                               # on-failure - 容器推出状态非0时重启
-                               # always - 始终重启
-docker start my-nginx               # 【启动】一个已经存在的容器
-docker restart my-nginx             # 【重启】容器
-docker stop my-nginx                # 【停止运行】一个容器
-docker kill my-nginx                # 【杀死】一个运行中的容器
-docker rename my-nginx new-nginx    # 【重命名】容器
-docker rm new-nginx                 # 【删除】容器
+docker start my-nginx               		# 【启动】一个已经存在的容器
+docker restart my-nginx             		# 【重启】容器
+docker stop my-nginx                		# 【停止运行】一个容器
+docker kill my-nginx                		# 【杀死】一个运行中的容器
+docker rename my-nginx new-nginx    		# 【重命名】容器
+docker rm new-nginx                 		# 【删除】容器
 ```
+
+### Docker容器开机启动设置
+
+```shell
+# Docker容器开机启动设置
+sudo docker run --restart=always -it centos /bin/bash
+--restart=always	# 默认情况下docker重启之后所有容器会被关闭，这个选项的意思是容器随docker engine自启动
+# 如果创建时候未指定--restart=always,可通过docker  update命令设置：
+docker update --restart=always  7b5f30fe77c0	
+# 注意Docker服务开启启动
+```
+
+restart参数介绍
+
+- no:容器退出时候，不重启容器
+
+- on-failure: 只有在非0状态退出时才重新启动容器
+
+- always:无论退出状态是如何，都重启容器
+
+- unless-stopped: 在容器退出时总是重启容器，但是不考虑在Docker守护进程启动时就已经停止了的容器
+
+  在使用on-failure策略时，指定Docker将尝试重新启动容器的最大次数；
+
+  默认情况下，Docker将尝试永远重新启动容器
+
+  ```
+  sudo docker run --restart=on-failure:5  <image>
+  ```
+
+### 通过容器创建镜像
 
 ### 进入容器
 
@@ -531,8 +446,26 @@ docker ps
 
 3. 使用`docker exec`命令进入一个已经在运行的容器
 
-```bash
-docker exec -it 6bd0496da64f /bin/bash
+```shell
+# 连接关闭的容器
+# 连接关闭但运行的容器
+[root@docker-39 ~]#  ps -q 
+7b5f30fe77c0
+[root@docker-39 ~]# docker attach 7b5f
+[root@7b5f30fe77c0 /]#
+
+# 连接关闭且未运行的容器
+docker ps -a -qf status=exited
+7968b44369
+[root@docker-39 ~]# docker start 7968b44369
+7968b44369
+[root@docker-39 ~]# docker attach 7968b44369			# 会附加该容器的标准输出到当前命令行
+
+
+# 启动状态的容器，执行任务
+# 通过exec命令可以创建两种任务：后台型任务和交互型任务
+# 后台型任务：docker exec -it test /bin/bash
+# 交互型任务：docker attach 7968
 ```
 
 通常有下面几种方式进入Docker的容器，推荐使用`exec`，使用`attach`一直进入失败。
