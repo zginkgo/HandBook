@@ -23,6 +23,7 @@ Docker 是一个开源的应用容器引擎，而一个<ruby>容器<rt>container
   - [镜像中安装软件](#镜像中安装软件)
 - [容器管理](#容器管理)
   - [容器服务管理](#容器服务管理)
+  - [Docker容器开机启动设置](Docker容器开机启动设置)
   - [通过容器创建镜像](#通过容器创建镜像)
   - [进入容器](#进入容器)
 - [文件拷贝](#文件拷贝)
@@ -516,8 +517,8 @@ docker ps -a -qf status=exited
 
 # 启动状态的容器，执行任务
 # 通过exec命令可以创建两种任务：后台型任务和交互型任务
-# 后台型任务：docker exec -it test /bin/bash
-# 交互型任务：docker attach 7968
+# 后台型任务：docker exec test /testfile
+# 交互型任务：docker exec -it test /bin/bash
 ```
 
 通常有下面几种方式进入Docker的容器，推荐使用`exec`，使用`attach`一直进入失败。
