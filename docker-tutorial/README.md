@@ -8,46 +8,8 @@ Docker 是一个开源的应用容器引擎，而一个<ruby>容器<rt>container
 - Docker 的局限性之一，它只能用在 64 位的操作系统上。
 
 # 目录
-===
 
-<!-- TOC -->
-
-- [新版本安装](#新版本安装)
-- [旧版本安装](#旧版本安装)
-- [命令介绍](#命令介绍)
-- [服务管理](#服务管理)
-- [镜像管理](#镜像管理)
-  - [通过容器创建镜像](#通过容器创建镜像)
-  - [通过Dockerfile创建镜像](#通过dockerfile创建镜像)
-  - [发布自己的镜像](#发布自己的镜像)
-  - [镜像中安装软件](#镜像中安装软件)
-- [容器管理](#容器管理)
-  - [容器命令参数](#容器命令参数)
-  - [容器服务管理](#容器服务管理)
-  - [通过容器创建镜像](#通过容器创建镜像)
-  - [进入容器](#进入容器)
-- [文件拷贝](#文件拷贝)
-- [Docker私有仓库搭建](#docker私有仓库搭建)
-  - [`registry`](#registry)
-  - [`Harbor`](#harbor)
-- [使用Docker实战](#使用docker实战)
-  - [`Nginx`](#nginx)
-  - [`MySQL`](#mysql)
-  - [`Redis`](#redis)
-  - [`Elasticsearch`](#elasticsearch)
-  - [`Gitlab`](#gitlab)
-  - [`Rocket.Chat`](#rocketchat)
-  - [`Humpback`](#humpback)
-  - [`Seafile`](#seafile)
-  - [更多](#更多)
-- [卸载旧的版本](#卸载旧的版本)
-- [参考资料](#参考资料)
-  - [官方英文资源](#官方英文资源)
-  - [中文资源](#中文资源)
-  - [其它资源](#其它资源)
-
-<!-- /TOC -->
-
+[TOC]
 
 Docker 从 `1.13` 版本之后采用时间线的方式作为版本号，分为社区版 `CE` 和企业版 `EE`，社区版是免费提供给个人开发者和小型团体使用的，企业版会提供额外的收费服务，比如经过官方测试认证过的基础设施、容器、插件等。
 
@@ -432,6 +394,7 @@ docker rename my-nginx new-nginx    		# 【重命名】容器
 docker rm new-nginx                 		# 【删除】容器
 ```
 
+### Docker容器开机启动设置
 
 ```shell
 # Docker容器开机启动设置
@@ -516,8 +479,8 @@ docker ps -a -qf status=exited
 
 # 启动状态的容器，执行任务
 # 通过exec命令可以创建两种任务：后台型任务和交互型任务
-# 后台型任务：docker exec test /testfile
-# 交互型任务：docker exec -it test /bin/bash
+# 后台型任务：docker exec -it test /bin/bash
+# 交互型任务：docker attach 7968
 ```
 
 通常有下面几种方式进入Docker的容器，推荐使用`exec`，使用`attach`一直进入失败。
