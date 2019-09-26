@@ -9,7 +9,6 @@ Docker 是一个开源的应用容器引擎，而一个<ruby>容器<rt>container
 
 # 目录
 
-
 <!-- TOC -->
 
 - [新版本安装](#新版本安装)
@@ -48,7 +47,6 @@ Docker 是一个开源的应用容器引擎，而一个<ruby>容器<rt>container
   - [其它资源](#其它资源)
 
 <!-- /TOC -->
-
 
 Docker 从 `1.13` 版本之后采用时间线的方式作为版本号，分为社区版 `CE` 和企业版 `EE`，社区版是免费提供给个人开发者和小型团体使用的，企业版会提供额外的收费服务，比如经过官方测试认证过的基础设施、容器、插件等。
 
@@ -293,6 +291,31 @@ $ docker image build -t koa-demo:0.0.1 .
 ```
 
 上面命令，`-t` 参数用来指定 `image` 文件的名字，后面还可以用冒号指定标签。如果不指定，默认的标签就是 `latest`。注意后面有个 `.`，表示 Dockerfile 文件所在的路径为当前路径
+
+### 镜像打包
+
+方案一:export
+
+​	利用export把正在运行的容器直接导出为tar包的镜像文件，可以用-o或>
+
+```shell
+docker run --name my-nginx -d -p 8080:80 some-centent-nginx:1.2
+docker export my-nginx > youmen_nginx.tar  &&  docker export -o youmen_nginx.tar my-nginx
+scp youmen_nginx.tar 120.77.248.31:
+docker import youmen_nginx.tar
+docker tag 121d8 mynginx:1							# 设置镜像名字
+docker import youmen_nginx.tar mynginx:1.1			# 导入时即设置镜像名字
+```
+
+方案二：利用save直接把镜像打包出来
+
+```bash
+docker save -o suibian.tar library/centos:latest 
+scp suibian.tar 192.168.135.161:
+docker load < suibian.tar				# 导入之后使用原名
+```
+
+
 
 ### 发布自己的镜像
 
@@ -705,6 +728,8 @@ docker container stop registry && docker container rm -v registry
 
 首先创建放持久化数据文件夹，`mkdir -p /opt/app/humpback-web`，里面存放持久化数据文件，会存储站点管理和分组信息，启动后请妥善保存。
 
+
+
 ```bash
 # 创建放持久化数据文件夹
 mkdir -p /opt/app/humpback-web
@@ -716,6 +741,16 @@ docker run -d --net=host --restart=always \
  -v /opt/app/humpback-web/dbFiles:/humpback-web/dbFiles \
  --name humpback-web \
  humpbacks/humpback-web:1.0.0
+ 
+ # 客户端上传镜像
+vim /etc/docker/daemon.json
+{
+  "insecure-registries":[
+    "39.108.140.0:7001"
+  ]
+}
+docker tag 98ebf73 39.108.140.0:7001/nginx
+docker push 39.108.140.0:7001/nginx
 ```
 
 访问站点，打开浏览器输入：http://192.168.99.100:7001 ，默认账户：`admin` 密码：`123456`
