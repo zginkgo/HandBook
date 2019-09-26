@@ -18,6 +18,10 @@ Docker 是一个开源的应用容器引擎，而一个<ruby>容器<rt>container
 - [镜像管理](#镜像管理)
   - [通过容器创建镜像](#通过容器创建镜像)
   - [通过Dockerfile创建镜像](#通过dockerfile创建镜像)
+  - [部署CentOS7容器应用](#部署CentOS7容器应用)
+    - [构建包含httpd应用的容器](#构建包含httpd应用的容器)
+    - [构建包含openssh-server应用的容器](#构建包含openssh-server应用的容器)
+    - [CentOS7的docker容器的一个bug](#CentOS7的docker容器的一个bug)
   - [发布自己的镜像](#发布自己的镜像)
   - [镜像打包](#镜像打包)
   - [镜像中安装软件](#镜像中安装软件)
@@ -27,6 +31,7 @@ Docker 是一个开源的应用容器引擎，而一个<ruby>容器<rt>container
   - [Docker容器开机启动设置](#Docker容器开机启动设置)
   - [通过容器创建镜像](#通过容器创建镜像)
   - [进入容器](#进入容器)
+  - [容器固定IP](#容器固定IP)
 - [文件拷贝](#文件拷贝)
 - [Docker私有仓库搭建](#docker私有仓库搭建)
   - [`registry`](#registry)
@@ -48,6 +53,7 @@ Docker 是一个开源的应用容器引擎，而一个<ruby>容器<rt>container
   - [其它资源](#其它资源)
 
 <!-- /TOC -->
+
 
 Docker 从 `1.13` 版本之后采用时间线的方式作为版本号，分为社区版 `CE` 和企业版 `EE`，社区版是免费提供给个人开发者和小型团体使用的，企业版会提供额外的收费服务，比如经过官方测试认证过的基础设施、容器、插件等。
 
@@ -292,6 +298,118 @@ $ docker image build -t koa-demo:0.0.1 .
 ```
 
 上面命令，`-t` 参数用来指定 `image` 文件的名字，后面还可以用冒号指定标签。如果不指定，默认的标签就是 `latest`。注意后面有个 `.`，表示 Dockerfile 文件所在的路径为当前路径
+
+### 部署CentOS7容器应用
+
+```shell
+# 生产生活中经常会涉及到使用基础镜像制作自己的镜像，经常使用的就是系统镜像，但是centos7镜像默认使用systemctl 命令是无法启动服务的。
+
+# 镜像中的包管理问题
+	# 默认情况下，为了减小镜像的尺寸，在构建CentOS镜像时用了yum的nodocs选项，如果你安装一个包发现文件缺失，请在/etc/yum.conf中注释掉tsflogs=nodocs之后重新安装。
+
+# systemd管理服务问题
+	# 在centos7之前使用init管理各种服务，centos7开始使用system管理系统中所有的服务，但因为systemd要求capsysadmin权限才能读取到宿主机cgroup(资源限制的能力)；另CentOS7中用fakesystemd代替了systemd来解决依赖问题，但如果使用fakesystem无法使用应用，故需要修改回systemd，
+# 无法启动服务也就无法远程连接
+[root@a3c8baf6961e .ssh]# systemctl restart sshd.service
+Failed to get D-Bus connection: Operation not permitted
+```
+
+
+
+#### 构建包含httpd应用的容器
+
+```shell
+1、使用dockerfile创建镜像
+[root@aliyun ~]# mkdir centos7
+[root@aliyun ~]# cd centos7/
+[root@aliyun centos7]# vim Dockerfile
+FROM daocloud.io/library/centos:latest
+MAINTAINER "xiaochen"  xiaochen@qq.com
+ENV container docker
+RUN yum -y swap -- remove fakesystemd -- install systemd systemd-libs
+RUN yum -y update; yum clean all; \
+(cd /lib/systemd/system/sysinit.target.wants/; for i in *; do [ $i == systemd-tmpfiles-setup.service ] || rm -f $i; done); \
+rm -f /lib/systemd/system/multi-user.target.wants/*;\
+rm -f /etc/systemd/system/*.wants/*;\
+rm -f /lib/systemd/system/local-fs.target.wants/*; \
+rm -f /lib/systemd/system/sockets.target.wants/*udev*; \
+rm -f /lib/systemd/system/sockets.target.wants/*initctl*; \
+rm -f /lib/systemd/system/basic.target.wants/*;\
+rm -f /lib/systemd/system/anaconda.target.wants/*;
+VOLUME [ "/sys/fs/cgroup" ]
+CMD ["/usr/sbin/init"]
+
+# 删除fakesystemd并安装systemd，然后再构建基础镜像
+[root@aliyun centos7]# docker build --rm -t local/c7-systemd .
+
+# 构建包含httpd应用的容器
+# 1、使用构建之后的基础镜像再去构建包含systemd应用的镜像
+[root@aliyun centos7]# mv Dockerfile  Dockerfile.bak
+[root@aliyun centos7]# vim Dockerfile
+[root@aliyun centos7]# cat Dockerfile
+FROM local/c7-systemd
+RUN yum -y install httpd; yum clean all; systemctl enable httpd.service
+EXPOSE 80
+CMD ["/usr/sbin/init"]
+
+[root@aliyun centos7]# docker build --rm -t local/c7-systemd-httpd .
+
+# 2、运行包含systemd的httpd的应用容器
+# 需要使用--privileged选项,并且挂载主机的 cgroups 文件夹。
+[root@aliyun centos7]# docker run --privileged -ti -v /sys/fs/cgroup:/sys/fs/cgroup:ro -p 80:80 local/c7-systemd-httpd
+
+# 注意：不能添加/bin/bash，添加了会导致服务不可用，而且有些服务可能会发现之前提到的权限不够的问题，但是如果不加会运行在前台(没有用-d)，可以用ctrl+p+q放到后台去
+
+# 3、访问测试  -p 80:88   IP:88
+```
+
+#### 构建包含openssh-server应用的容器
+
+```bash
+[root@aliyun centos7]# cat Dockerfile
+FROM local/c7-systemd
+RUN yum -y install openssh-server; yum clean all; systemctl enable sshd.service
+RUN echo 1 | passwd --stdin root
+EXPOSE 22
+CMD ["/usr/sbin/init"]
+
+[root@aliyun centos7]# docker build --rm -t local/c7-systemd-sshd .
+
+[root@aliyun centos7]# docker run --privileged -ti -v /sys/fs/cgroup:/sys/fs/cgroup:ro -p 2222:22 local/c7-systemd-sshd
+
+[root@localhost ~]# ssh 39.108.140.0 -p 2222
+```
+
+#### CentOS7的docker容器的一个bug
+
+```bash
+centos7镜像创建的容器里面安装服务后，不能用systemctl/service启动服务，centos6的容器里没有这个坑！
+原因是：dbus-daemon没能启动
+
+[root@a3c8baf6961e .ssh]# systemctl restart sshd.service
+Failed to get D-Bus connection: Operation not permitted
+
+治标不治本的解决方案如下：
+将CMD设置为/usr/sbin/init即可。这样就会自动将dbus等服务启动起来，即采用 /usr/sbin/init自动启动dbus daemon。在启动容器时，加上参数--privileged和/sbin/init即可
+ 
+[root@localhost ~]#  docker run --privileged -i -t library/centos /sbin/init     
+上面的容器启动后，会一直在卡着的状态中，先不用管，打开另一个终端窗口，查看容器。这里注意，宿主机可能会出现注销当前登陆账户的情况
+ 
+[root@localhost ~]# docker ps
+然后按照容器的ID进去，这个时候再根据/bin/bash进入容器（前面加exec -it参数），接着重启ssh服务就ok了
+[root@localhost ~]# docker exec -it af40bd07fa0f /bin/bash
+[root@af40bd07fa0f /]# systemctl restart sshd.service
+
+这个解决方案有很大的坑：
+1、卡住不动的问题
+2、打开图形就会先把图形重启
+```
+
+
+
+
+
+
 
 ### 镜像打包
 
@@ -552,6 +670,59 @@ docker ps -a -qf status=exited
 - 使用`SSH` [为什么不需要在 Docker 容器中运行 sshd](http://www.oschina.net/translate/why-you-dont-need-to-run-sshd-in-docker?cmp)
 - 使用`nsenter`进入Docker容器，[nsenter官方仓库](https://github.com/jpetazzo/nsenter)
 - 使用`docker exec`，在`1.3.*`之后提供了一个新的命令`exec`用于进入容器
+
+
+
+### 容器固定IP
+
+```bash
+# 容器不需要有固定ip，生产中用k8s，k8s不用容器的ip地址，当然k8s也不会直接用容器，用的是pod，pod也需要用ip地址，而是用标签的。这个只为了面试的时候应付面试的，实际应用没有太大作用。
+docker的网络类型
+1、查看docker默认的三种网络类型
+[root@aliyun ~]# docker network list
+NETWORK ID            NAME                DRIVER              SCOPE
+90b22f633d2f          bridge              bridge              local
+e0b365da7fd2          host                host                local
+da7b7a090837         none                null                local
+
+bridge:网络桥接
+        默认情况下启动、创建容器都是用该模式，所以每次docker容器重启时会按照顺序获取对应ip地址，这就导致容器每次重启，ip都发生变化
+
+none：无指定网络
+    启动容器时，可以通过–network=none,docker容器不会分配局域网ip
+
+host：主机网络
+        docker容器的网络会附属在主机上，两者是互通的。
+
+2、创建固定ip容器
+1）、创建自定义网络类型，并且指定网段
+[root@aliyun ~]# docker network create --subnet=192.168.0.0/16 staticnet
+d0806acb2cce0f6c53089c7bd4218d4590a5eb3b014b9ca9a5e0eaa113e8ecb7
+[root@aliyun ~]# docker network  list     
+NETWORK ID          NAME         DRIVER             SCOPE
+93db3aba13ab        bridge              bridge              local
+29315fe6b3d5        host                host                local
+0a44ab133923        none                null                local
+d0806acb2cce        staticnet           bridge              local
+
+2）、使用新的网络类型创建并启动容器
+[root@aliyun ~]# docker run -it --name userserver --net staticnet --ip 192.168.0.2  daocloud.io/library/centos:7
+[root@203a8a8ab5da /]# 
+[root@aliyun ~]# docker inspect 203a8a |grep -i ipaddress
+            "SecondaryIPAddresses": null,
+            "IPAddress": "",
+                    "IPAddress": "192.168.0.2",
+[root@aliyun ~]# docker stop 203a8a     //重启容器，观察地址是否发生变化
+203a8a
+[root@aliyun ~]# docker start 203a8a
+203a8a
+[root@aliyun ~]# docker inspect 203a8a |grep -i ipaddress
+            "SecondaryIPAddresses": null,
+            "IPAddress": "",
+                    "IPAddress": "192.168.0.2",
+```
+
+
 
 ## 文件拷贝
 
